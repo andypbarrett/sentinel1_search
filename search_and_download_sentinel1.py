@@ -150,9 +150,6 @@ def roi2polygon(roi, toproj=None):
 
 def make_map(result, debug=False):
     """Create a map of selected scenes color coded by month
-
-
-    TODO: Add search polygon
     """
     proj = ccrs.NorthPolarStereo()
 
@@ -349,7 +346,7 @@ def main(nscenes=600):
 
     make_map(subset)
 
-    #create_html(subset)
+    create_html(subset)
 
     write_links(subset)
 
@@ -358,7 +355,7 @@ if __name__ == "__main__":
     import argparse
 
     parser = argparse.ArgumentParser(description="Searches for and downloads Sentinel-1 scenes for a region of interest")
-    parser.add_argument("--nscenes", "-n", type=int, default=60,
+    parser.add_argument("--nscenes", "-n", type=int, default=600,
                         help="Number of scenes to search for")
 
     args = parser.parse_args()
