@@ -13,3 +13,4 @@ dependencies:
  - matplotlib
  - cartopy
  - pandas
+ - gdal
