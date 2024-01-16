@@ -108,6 +108,8 @@ def stratified_selection(results, n=600):
     Stratified sample
     """
 
+    np.random.seed(4379)
+    
     aresults = np.array(results)
 
     months = get_observation_month(results)
@@ -128,12 +130,23 @@ def stratified_selection(results, n=600):
 
 
 def spatial2polygon(s, toproj=None):
-    points = [tuple(point.values()) for point in s["umm"]["SpatialExtent"]["HorizontalSpatialDomain"]["Geometry"]["GPolygons"][0]["Boundary"]["Points"]]
+    # Fudge for dealing with umm points or a list
+    boundary = s["umm"]["SpatialExtent"]["HorizontalSpatialDomain"]["Geometry"]["GPolygons"][0]["Boundary"]["Points"]
+    points = [tuple(point.values()) for point in boundary]
     if toproj:
         points = toproj.transform_points(ccrs.PlateCarree(), *map(np.array, zip(*points)))[:,:2]
     polygon = Polygon(points)
     return polygon
 
+
+def roi2polygon(roi, toproj=None):
+    if toproj:
+        points = toproj.transform_points(ccrs.PlateCarree(), *map(np.array, zip(*roi)))[:,:2]
+    else:
+        points = roi
+    polygon = Polygon(points)
+    return polygon
+    
 
 def make_map(result, debug=False):
     """Create a map of selected scenes color coded by month
@@ -163,6 +176,9 @@ def make_map(result, debug=False):
     polygon = [spatial2polygon(r, toproj=proj) for r in result]
     geom = ax.add_geometries(polygon, proj, facecolor=fc, edgecolor=ec, alpha=0.5)
 
+    search_geom = ax.add_geometries(roi2polygon(region_of_interest, toproj=proj), proj,
+                                    facecolors='none', edgecolors='0.75', zorder=1)
+    
     # Make the legend
     handles = []
     labels = []
@@ -317,16 +333,34 @@ scenes are shown below color coded by month of acquisition.</p>
     webbrowser.open("file:///" + str(url))
 
 
-def main():
+def write_links(result, fo="sentinel1_data_links.txt"):
+    """Writes results to file"""
+    url_links = list(chain.from_iterable([r.data_links() for r in result]))
+    print(f"Writing data links to {fo}")
+    with open(fo, "w") as f:
+        f.write('\n'.join(url_links))
+
+
+def main(nscenes=600):
 
     result = search_sentinel1()
 
-    subset = stratified_selection(result, n=60)
+    subset = stratified_selection(result, n=nscenes)
 
     make_map(subset)
 
-    create_html(subset)
+    #create_html(subset)
+
+    write_links(subset)
 
 
 if __name__ == "__main__":
-    main()
+    import argparse
+
+    parser = argparse.ArgumentParser(description="Searches for and downloads Sentinel-1 scenes for a region of interest")
+    parser.add_argument("--nscenes", "-n", type=int, default=60,
+                        help="Number of scenes to search for")
+
+    args = parser.parse_args()
+    
+    main(nscenes=args.nscenes)
